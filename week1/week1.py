@@ -6,6 +6,7 @@ print(world.head())
 
 
 from matplotlib.pyplot import subplots, savefig
+
 # create map axis object
 my_fig, my_ax = subplots(1, 1, figsize=(16, 10))
 
