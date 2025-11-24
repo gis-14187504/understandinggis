@@ -33,6 +33,8 @@ print(column_stack(line(row, col, row, col+50)))
 
 output[row, col] = 1
 
+output[line(row, col, row, col+50)] = 1
+
 # plot the dataset
 fig, my_ax = subplots(1, 1, figsize=(16, 10))
 
