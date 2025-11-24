@@ -22,6 +22,42 @@ def coord_2_img(transform, x, y):
     r, c = rowcol(transform, x, y)
     return (int(r), int(c))
 
+from math import hypot
+
+def line_of_sight(r0, c0, height0,
+                  r1, c1, height1,
+                  radius, dem_data, transform,
+                  output):
+
+    max_dydx = -float('inf')
+
+    # pixels along the line (skip first)
+    for r, c in column_stack(line(r0, c0, r1, c1))[1:]:
+
+        # distance from observer (in pixels)
+        dx = hypot(r - r0, c - c0)
+
+        # stop if beyond radius or outside DEM
+        if dx > radius or not (0 <= r < dem_data.shape[0]) or not (0 <= c < dem_data.shape[1]):
+            break
+
+        # elevation of this cell
+        ground = dem_data[r, c]
+
+        # dy/dx for ground and tip of target
+        base_dydx = (ground - height0) / dx
+        tip_dydx  = (ground + height1 - height0) / dx
+
+        # if tip is visible, mark cell
+        if tip_dydx > max_dydx:
+            output[r, c] = 1
+
+        # update max
+        max_dydx = max(max_dydx, base_dydx)
+
+    return output
+
+
 def viewshed(x0, y0, radius_m, observer_height, target_height, dem_data, transform):
     r0, c0 = rowcol(transform, x0, y0)
     r0 = int(r0)
@@ -41,8 +77,17 @@ def viewshed(x0, y0, radius_m, observer_height, target_height, dem_data, transfo
     print(f"Observer height ASL: {height0:.2f} m")
     
     output = zeros(dem_data.shape, dtype='uint8')
+       
+    output[r0, c0] = 1
     
-    return output
+    # get pixels in the perimeter of the viewshed
+    for r, c in column_stack(circle_perimeter(r0, c0, radius_px)):
+
+	# calculate line of sight to each pixel, pass output and get a new one back each time
+    	output = line_of_sight(r0, c0, height0, r, c, target_height, radius_px, dem_data, transform, output)
+
+    # return the resulting viewshed
+    return output   
 
 x = 334170
 y = 515165
@@ -52,7 +97,6 @@ x0, y0 = 330000, 512500
 
 # transform the coordinates for the summit of Helvellyn into image space
 row, col = coord_2_img(dem.transform, x, y)
-
 
 # print out the elevation at that location by reading it from the dataset
 print(f"{dem_data[row][col]:.0f}m")	# note that this makes use of an f-string to format the number
@@ -67,6 +111,10 @@ output[circle_perimeter(row, col, 50)] = 1
 
 # calculate the viewshed
 output = viewshed(x0, y0, 20000, 1.8, 100, dem_data, dem.transform)
+
+
+
+
 
 # plot the dataset
 fig, my_ax = subplots(1, 1, figsize=(16, 10))
