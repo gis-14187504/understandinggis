@@ -28,6 +28,14 @@ def coord_2_img(transform, x, y):
     r, c = rowcol(transform, x, y)
     return (int(r), int(c))
 
+def adjust_height(height, distance, earth_diameter=12740000, refraction_coefficient=0.13):
+	"""
+	* Adjust the apparant height of an object at a certain distance, accounting for the
+	* 	curvature of the earth and atmospheric refraction
+	"""
+    
+	return height - (distance**2 / earth_diameter) * (1 - refraction_coefficient)
+
 def line_of_sight(r0, c0, height0,
                   r1, c1, height1,
                   radius, dem_data, transform,
@@ -48,9 +56,16 @@ def line_of_sight(r0, c0, height0,
         # elevation of this cell
         ground = dem_data[r, c]
 
-        # dy/dx for ground and tip of target
-        base_dydx = (ground - height0) / dx
-        tip_dydx  = (ground + height1 - height0) / dx
+        # convert pixel distance to metres
+        distance_m = dx * transform[0]
+
+        # adjust the heights for curvature + refraction
+        ground_adj = adjust_height(ground, distance_m)
+        target_tip_adj = adjust_height(ground + height1, distance_m)
+
+        # compute dydx using adjusted heights
+        base_dydx = (ground_adj - height0) / dx
+        tip_dydx  = (target_tip_adj - height0) / dx
 
         # if tip is visible, mark cell
         if tip_dydx > max_dydx:
@@ -92,6 +107,8 @@ def viewshed(x0, y0, radius_m, observer_height, target_height, dem_data, transfo
 
     # return the resulting viewshed
     return output   
+
+
 
 x = 334170
 y = 515165
