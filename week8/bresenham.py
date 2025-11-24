@@ -6,6 +6,8 @@ from matplotlib.colors import LinearSegmentedColormap
 from rasterio.transform import rowcol, xy
 from skimage.draw import line
 from numpy import column_stack
+from skimage.draw import circle_perimeter
+
 
 # open the elevation data file
 with rio_open("../data/helvellyn/Helvellyn-50.tif") as dem:
@@ -34,6 +36,8 @@ print(column_stack(line(row, col, row, col+50)))
 output[row, col] = 1
 
 output[line(row, col, row, col+50)] = 1
+
+output[circle_perimeter(row, col, 50)] = 1
 
 # plot the dataset
 fig, my_ax = subplots(1, 1, figsize=(16, 10))
